@@ -12,33 +12,51 @@ void initPins()
 	pinMode(pin_button_zero, OUTPUT);
 }
 
+
+
 //Initialize servo motor
 //_____________________________________________________________________________________________________________________________________________
 void initServo()
 {
-
+	servo.attach(pin_servo);
 }
 
-//Initialize the sensors
+
+
+//Initialize the altimeter (barometer)
 //_____________________________________________________________________________________________________________________________________________
-void initSensors()
+void initAltimeter()
 {
+	#if DEBUG
+	Serial.print("Altimeter...\t");
+	#endif
 
-	if (!bmp.begin())
+	//if the altimeter is successfully initialized
+	if (bmp.begin())
 	{
-		/* There was a problem detecting the BMP180 ... check your connections */
-		Serial.println("Ooops, no BMP180 detected ... Check your wiring!");
-		while (1);
+		#if DEBUG
+		Serial.println("initialized!");
+		#endif
 	}
 
+	//else, set an error message
+	else
+	{
+		e &= 1 << 1; //set bit# 1, altimeter error
+
+		#if DEBUG
+		Serial.println("failed to initialize");
+		#endif
+	}
+}
+
+
+
+//Initialize the accelerometer
+//_____________________________________________________________________________________________________________________________________________
+void initAccelerometer()
+{
 	/*
-	if (!mag.begin())
-	{
-	// There was a problem detecting the LSM303(magnetometer) ... check your connections
-	Serial.println("Ooops, no LSM303(magnetometer) detected ... Check your wiring!");
-	while (1);
-	}
-
 	if (!accel.begin())
 	{
 	// There was a problem detecting the LSM303(accelerometer) ... check your connections
@@ -46,6 +64,31 @@ void initSensors()
 	while (1);
 	}
 	*/
+}
+
+
+
+//Initialize the magnetometer (compass)
+//_____________________________________________________________________________________________________________________________________________
+void initMagnetometer()
+{
+	/*
+	if (!mag.begin())
+	{
+	// There was a problem detecting the LSM303(magnetometer) ... check your connections
+	Serial.println("Ooops, no LSM303(magnetometer) detected ... Check your wiring!");
+	while (1);
+	}
+	*/
+}
+
+
+
+//Initialize the SD-card and log files
+//_____________________________________________________________________________________________________________________________________________
+void initSDCard()
+{
+
 }
 
 

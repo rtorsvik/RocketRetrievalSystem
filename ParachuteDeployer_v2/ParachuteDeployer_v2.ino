@@ -36,6 +36,7 @@
 #define pin_led_red 3
 #define pin_led_green 5
 #define pin_led_blue 6
+#define pin_servo 10
 #define pin_button_zero 22
 
 
@@ -57,6 +58,8 @@ Adafruit_BMP085_Unified       bmp = Adafruit_BMP085_Unified(18001);
 
 //Global variables
 //_____________________________________________________________________________________________________________________________________________
+
+
 float altitudeRaw;
 float altitudeMean;
 float altitude[10];
@@ -65,6 +68,14 @@ float temperatureRaw;
 
 
 float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
+
+boolean deployParachute = false;
+
+int e = 0;					//error messages
+//bit#, error message
+//0, <spare>
+//1, Altimeter error
+//2, SD-card error
 
 
 
@@ -87,14 +98,17 @@ void setup(void)
 
 #if DEBUG
 	Serial.begin(9600);
-	Serial.print("Initializing parachute deployment mechanism \nVersion: "); Serial.println(VERSION);
+	Serial.print("Initializing parachute deployment and data acquisition module \nVersion: "); Serial.println(VERSION);
 #endif
+
+	//set the indikator LED red to indicate start of initialization
+	digitalWrite(pin_led_red, 255);
 
 	//Initialize GPIO pins
 	initPins();
 
 	//Initialise the sensors
-	initSensors();
+	initAltimeter();
 
 	//Initialize serv motor
 	initServo();
@@ -114,6 +128,36 @@ void loop(void)
 	ms = millis();
 	dt = ms - ms_prev;
 	ms_prev = ms;
+
+	//update status LED state
+	//if parachute is deployed, status LED blinks blue
+	if (deployParachute)
+	{
+		//for now, no blinksm, just constant lights
+		digitalWrite(pin_led_red, 0);
+		digitalWrite(pin_led_green, 0);
+		digitalWrite(pin_led_blue, 255);
+	}
+	//else, if there are no errors, status LED is green
+	else if (e = 0)
+	{
+		digitalWrite(pin_led_red, 0);
+		digitalWrite(pin_led_green, 255);
+		digitalWrite(pin_led_blue, 0);
+	}
+	//else, if there are errors, status LED should blink red accordingly
+	else if (e > 0)
+	{
+		//for now, no blinks, just a constant red light
+		digitalWrite(pin_led_red, 255);
+		digitalWrite(pin_led_green, 0);
+		digitalWrite(pin_led_blue, 0);
+	}
+
+
+
+
+	//temporary code follows
 	
 	//fast loop
 	if (runCount % 2 == 0)
