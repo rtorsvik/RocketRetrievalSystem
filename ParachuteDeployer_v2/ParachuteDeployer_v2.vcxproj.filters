@@ -18,6 +18,7 @@
     <None Include="ParachuteDeployer_v2.ino" />
     <None Include="Initialization.ino" />
     <None Include="Sensors.ino" />
+    <None Include="statusLED.ino" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.ParachuteDeployer_v2.vsarduino.h">

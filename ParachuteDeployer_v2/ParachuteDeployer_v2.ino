@@ -53,22 +53,23 @@ Adafruit_BMP085_Unified       bmp = Adafruit_BMP085_Unified(18001);
 
 //Global constants
 //_____________________________________________________________________________________________________________________________________________
-
+int8_t led_r_intensity = 255;
+int8_t led_g_intensity = 255;
+int8_t led_b_intensity = 255;
 
 
 //Global variables
 //_____________________________________________________________________________________________________________________________________________
-
-
 float altitudeRaw;
 float altitudeMean;
 float altitude[10];
 float altitudeOffset = 0;
 float temperatureRaw;
 
-
 float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
 
+
+//system state
 boolean deployParachute = false;
 
 int e = 0;					//error messages
@@ -76,6 +77,8 @@ int e = 0;					//error messages
 //0, <spare>
 //1, Altimeter error
 //2, SD-card error
+
+
 
 
 
@@ -129,63 +132,25 @@ void loop(void)
 	dt = ms - ms_prev;
 	ms_prev = ms;
 
-	//update status LED state
-	//if parachute is deployed, status LED blinks blue
-	if (deployParachute)
-	{
-		//for now, no blinksm, just constant lights
-		digitalWrite(pin_led_red, 0);
-		digitalWrite(pin_led_green, 0);
-		digitalWrite(pin_led_blue, 255);
-	}
-	//else, if there are no errors, status LED is green
-	else if (e = 0)
-	{
-		digitalWrite(pin_led_red, 0);
-		digitalWrite(pin_led_green, 255);
-		digitalWrite(pin_led_blue, 0);
-	}
-	//else, if there are errors, status LED should blink red accordingly
-	else if (e > 0)
-	{
-		//for now, no blinks, just a constant red light
-		digitalWrite(pin_led_red, 255);
-		digitalWrite(pin_led_green, 0);
-		digitalWrite(pin_led_blue, 0);
-	}
+	
 
 
 
 
 	//temporary code follows
 	
-	//fast loop
-	if (runCount % 2 == 0)
-	{
-		//Get sensor data
-		getSensorData();
-	}
+	getSensorData();
+	delay(100);
 
-	//medium loop
-	if (runCount % 16 == 0)
-	{
 
-	}
 
-	//slow loop
-	if (runCount % 256 == 0) 
-	{
-		//save data to SD card
-	}
 
+	//handle indikating of system status via status LED
+	updateStatusLED();
 
 	
 
-	Serial.print("Altityde: ");
-	Serial.print(altitudeMean);
-	Serial.println("m");
-
-	delay(100);
+	
 
 	//end of loop
 	runCount++;
