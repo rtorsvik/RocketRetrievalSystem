@@ -1,5 +1,5 @@
 /*
-
+	Initialization of different modules
 */
 
 //Initialize GPIO pins
@@ -42,7 +42,7 @@ void initAltimeter()
 	//else, set an error message
 	else
 	{
-		e &= 1 << 1; //set bit# 1, altimeter error
+		e |= 1;		//set bit nr 0, altimeter error
 
 		#if DEBUG
 		Serial.println("failed to initialize");

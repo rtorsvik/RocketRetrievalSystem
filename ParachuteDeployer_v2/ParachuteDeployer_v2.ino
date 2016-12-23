@@ -10,6 +10,8 @@
 
 
 
+
+
 //precompile options
 //_____________________________________________________________________________________________________________________________________________
 #define DEBUG true
@@ -33,9 +35,9 @@
 
 //GPOI pins
 //_____________________________________________________________________________________________________________________________________________
-#define pin_led_red 3
+#define pin_led_red 6
 #define pin_led_green 5
-#define pin_led_blue 6
+#define pin_led_blue 9
 #define pin_servo 10
 #define pin_button_zero 22
 
@@ -53,9 +55,7 @@ Adafruit_BMP085_Unified       bmp = Adafruit_BMP085_Unified(18001);
 
 //Global constants
 //_____________________________________________________________________________________________________________________________________________
-int8_t led_r_intensity = 255;
-int8_t led_g_intensity = 255;
-int8_t led_b_intensity = 255;
+
 
 
 //Global variables
@@ -74,10 +74,8 @@ boolean deployParachute = false;
 
 int e = 0;					//error messages
 //bit#, error message
-//0, <spare>
-//1, Altimeter error
-//2, SD-card error
-
+//0, Altimeter error
+//1, SD-card error
 
 
 
@@ -100,21 +98,24 @@ void setup(void)
 {
 
 #if DEBUG
+	delay(1000);
 	Serial.begin(9600);
 	Serial.print("Initializing parachute deployment and data acquisition module \nVersion: "); Serial.println(VERSION);
+	Serial.println();
 #endif
-
-	//set the indikator LED red to indicate start of initialization
-	digitalWrite(pin_led_red, 255);
 
 	//Initialize GPIO pins
 	initPins();
+
+	//set the indikator LED red to indicate start of initialization
+	led_r_on();
 
 	//Initialise the sensors
 	initAltimeter();
 
 	//Initialize serv motor
 	initServo();
+
 
 }
 
@@ -137,16 +138,17 @@ void loop(void)
 
 
 
-	//temporary code follows
 	
-	getSensorData();
-	delay(100);
+	
+	//getSensorData();
 
+	
 
 
 
 	//handle indikating of system status via status LED
 	updateStatusLED();
+
 
 	
 
