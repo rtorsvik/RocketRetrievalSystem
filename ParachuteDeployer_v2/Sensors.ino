@@ -36,6 +36,7 @@ void getSensorData()
 	}
 	*/
 
+	/*
 	//Barometer 
 	//_________________________________________________________________________________________________________________________________________
 	sensors_event_t bmp_event;
@@ -46,27 +47,33 @@ void getSensorData()
 		//Get ambient temperature in *C
 		bmp.getTemperature(&temperatureRaw);
 
-		//Calculate the altitude using the barometric pressure sensor
-		//Convert atmospheric pressure, SLP and temp to altitude
-		altitudeMean = 0;
-		altitudeRaw = bmp.pressureToAltitude(seaLevelPressure,	bmp_event.pressure,	temperatureRaw);		
-		for (int i = 9; i > 0; i--)
-		{
-			altitude[i] = altitude[i - 1];
-			altitudeMean += altitude[i];
-		}
-		altitude[0] = altitudeRaw;
-		altitudeMean += altitudeRaw;
 
-		altitudeMean /= 10;
+		altitudeRaw = bmp.pressureToAltitude(seaLevelPressure, bmp_event.pressure, temperatureRaw);		
 
-
-		if (digitalRead(pin_button_zero)) {
-			altitudeOffset = altitudeMean;
-		}
-
-		altitudeMean -= altitudeOffset;
 
 	}
+	*/
+
+}
+
+
+//Get altitude from atimeter (barometer)
+//_________________________________________________________________________________________________________________________________________
+float getAltitude()
+{
+	sensors_event_t bmp_event;
+	float alt;
+
+	bmp.getEvent(&bmp_event);
+	if (bmp_event.pressure)
+	{
+		//Get ambient temperature in *C
+		bmp.getTemperature(&temperatureRaw);
+
+		//Get altitude raw value
+		alt = bmp.pressureToAltitude(seaLevelPressure, bmp_event.pressure, temperatureRaw);
+	}
+
+	return alt;
 
 }

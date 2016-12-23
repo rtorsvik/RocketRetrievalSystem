@@ -55,18 +55,18 @@ Adafruit_BMP085_Unified       bmp = Adafruit_BMP085_Unified(18001);
 
 //Global constants
 //_____________________________________________________________________________________________________________________________________________
-
+const float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
 
 
 //Global variables
 //_____________________________________________________________________________________________________________________________________________
 float altitudeRaw;
-float altitudeMean;
-float altitude[10];
-float altitudeOffset = 0;
+float altitude;
+float altitude_ground;
+
 float temperatureRaw;
 
-float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
+
 
 
 //system state
@@ -139,20 +139,47 @@ void loop(void)
 
 
 	
-	
-	//getSensorData();
+	//Altitude
+	//get the altitude from the altimeter (barometer) and filter the raw value
+	//10 seconds startup, set the current altitude as the grount level
+	altitudeRaw = getAltitude();
+	altitudeRaw = altitudeRaw - altitude_ground;	//subtract ground level from raw altitude value
+
+	float a = 0.9;									//filter constant
+	altitude = a*altitude + (1 - a)*altitudeRaw;	//filter raw altitude values with FIR filter
+
+	if (altitude_ground == 0 && ms > 10000)			//after 10 seconds, set current altitude as ground level
+	{
+		altitude_ground = altitude;
+	}
 
 	
 
+	
+
+
+
+
+
+	
+
+
+
+	//print debug values
+	#if DEBUG
+	if (runCount % 16 == 0)
+	{
+		Serial.println("System data:");
+		Serial.print("\tloop time [ms]:\t"); Serial.println(dt);
+		Serial.print("\taltitude [m]:\t"); Serial.println(altitude);
+
+		Serial.println();
+	}
+	#endif
 
 
 	//handle indikating of system status via status LED
 	updateStatusLED();
-
-
-	
-
-	
 
 	//end of loop
 	runCount++;
