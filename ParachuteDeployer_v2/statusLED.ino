@@ -10,9 +10,9 @@
 		Blinks comes in pairs to make it easyer to count.
 
 		bit nr,	error
-		0		altimeter is disconnected	(meaning the parachute might not deploy)
+		0		Altimeter is disconnected	(meaning the parachute might not deploy)
 		1		Error on SD card			(the acquired data might not be saved to the SD card)
-		2		accelerometer is disconnected
+		2		Accelerometer or magnetometer error
 		3
 
 		Example:
@@ -52,6 +52,8 @@ int blink_count = 0;			//number of times to blink
 
 
 
+//Update status LED
+//_____________________________________________________________________________________________________________________________________________
 void updateStatusLED()
 {
 	//error light blink sequence

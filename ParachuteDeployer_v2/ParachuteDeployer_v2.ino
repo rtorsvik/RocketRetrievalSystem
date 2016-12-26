@@ -18,7 +18,7 @@
 //_____________________________________________________________________________________________________________________________________________
 #define VERSION 2.1
 #define DEBUG true
-#define SDCARD true
+#define SDCARD false
 
 
 
@@ -45,13 +45,6 @@
 #define pin_SD_CS 7
 
 
-//Global instances
-//_____________________________________________________________________________________________________________________________________________
-Servo							servo;											//parachute deployment servo
-Adafruit_10DOF					dof = Adafruit_10DOF();
-Adafruit_LSM303_Accel_Unified	accel = Adafruit_LSM303_Accel_Unified(30301);
-//Adafruit_LSM303_Mag_Unified   mag = Adafruit_LSM303_Mag_Unified(30302);
-Adafruit_BMP085_Unified			bmp = Adafruit_BMP085_Unified(18001);
 
 
 
@@ -59,11 +52,7 @@ Adafruit_BMP085_Unified			bmp = Adafruit_BMP085_Unified(18001);
 //_____________________________________________________________________________________________________________________________________________
 const int		altitudeDropThreshold = 2;				//how many meters of drop below the max height before the parachute deploys
 
-const float		seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
 const float		filterConstant = 0.95;					//filter constant for the filtering of sensor values (value between 0 and 1)
-
-const uint8_t	servo_open = 10;						//servo possition to open hatch and deploy parachute
-const uint8_t	servo_closed = 90;						//servo porrition when hacth is closed
 
 
 
@@ -78,11 +67,7 @@ float	temperatureRaw;					//raw temperature value
 
 sensors_vec_t   orientation;
 
-
-
 boolean deployParachute = false;		//is set to true when system should deploy parashute
-boolean openHatch = false;				//flag to tell system to unlock parachute
-long ms_close_hatch;
 
 
 
@@ -125,7 +110,7 @@ void setup(void)
 
 #if SDCARD
 	//Initialize SD-Card and generate new log file
-	//initSDCARD();
+	initSDCARD();
 #endif
 
 	//Initialize serv motor
@@ -222,36 +207,21 @@ void loop(void)
 	altitude_max = max(altitude, altitude_max);
 
 	if (altitude < altitude_max - altitudeDropThreshold
-		&& !deployParachute)								//if altitude drops beneth a sertain threshold, set command to deploy parchute
+		&& !deployParachute)								//if altitude drops beneth a sertain threshold, deploy parchute
 	{
 		deployParachute = true;
-		openHatch = true;
+		openHatch();
 	}
 
-	if (openHatch)											//if parachute should deploy, release hatch lock for 1000ms
-	{
-		ms_close_hatch = ms + 1000;
-		openHatch = false;
-	}
+	//if (digitalRead(pin_button)
+	//	&& !openHatch)
+	//{
+	//	openHatch();
+	//}
 
-	if (ms > ms_close_hatch)								//if the 1000ms has run out, detach servo (close hatch lock)
-	{
-		servo.detach();
-	}
-	else													
-	{
-		servo.attach(pin_servo);
-		servo.write(servo_open);
-	}
-	
+	hatchControl();
 
-	
-
-
-
-
-
-	
+		
 
 
 
@@ -269,9 +239,11 @@ void loop(void)
 		Serial.println();
 		Serial.print("\ttemperature [*C]:\t"); Serial.println(temperatureRaw);
 		Serial.println();
-		ms > ms_close_hatch ? Serial.println("\thatch:\t\t\tclosed") : Serial.println("\thatch:\t\t\topened");
+		deployParachute ? Serial.println("\tparachute:\t\tdeployed") : Serial.println("\thatch:\t\t\tready");
+		hatchControl() ? Serial.println("\thatch:\t\t\topened") : Serial.println("\thatch:\t\t\tclosed");
 	}
 	#endif
+
 
 
 	//handle indikating of system status via status LED

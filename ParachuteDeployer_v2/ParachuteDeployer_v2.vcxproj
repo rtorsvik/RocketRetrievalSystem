@@ -74,7 +74,13 @@
     <None Include="ParachuteDeployer_v2.ino">
       <FileType>CppCode</FileType>
     </None>
-    <None Include="Sensors.ino">
+    <None Include="SDCard.ino">
+      <FileType>CppCode</FileType>
+    </None>
+    <None Include="10DOFSensor.ino">
+      <FileType>CppCode</FileType>
+    </None>
+    <None Include="Servo.ino">
       <FileType>CppCode</FileType>
     </None>
     <None Include="statusLED.ino">

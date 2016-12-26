@@ -17,8 +17,10 @@
   <ItemGroup>
     <None Include="ParachuteDeployer_v2.ino" />
     <None Include="Initialization.ino" />
-    <None Include="Sensors.ino" />
     <None Include="statusLED.ino" />
+    <None Include="SDCard.ino" />
+    <None Include="Servo.ino" />
+    <None Include="10DOFSensor.ino" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.ParachuteDeployer_v2.vsarduino.h">
