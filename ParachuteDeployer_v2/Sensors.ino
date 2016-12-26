@@ -62,7 +62,7 @@ void getSensorData()
 float getAltitude()
 {
 	sensors_event_t bmp_event;
-	float alt;
+	float altitude;
 
 	bmp.getEvent(&bmp_event);
 	if (bmp_event.pressure)
@@ -71,9 +71,25 @@ float getAltitude()
 		bmp.getTemperature(&temperatureRaw);
 
 		//Get altitude raw value
-		alt = bmp.pressureToAltitude(seaLevelPressure, bmp_event.pressure, temperatureRaw);
+		altitude = bmp.pressureToAltitude(seaLevelPressure, bmp_event.pressure, temperatureRaw);
 	}
 
-	return alt;
+	return altitude;
+
+}
+
+
+
+//Get acceleration from accelerometer
+//_________________________________________________________________________________________________________________________________________
+sensors_vec_t getAcceleration()
+{
+	sensors_event_t accel_event;
+	sensors_vec_t   orientation;
+
+	//Calculate pitch and roll from the raw accelerometer data
+	accel.getEvent(&accel_event);
+	if (dof.accelGetOrientation(&accel_event, &orientation))
+		return orientation;
 
 }

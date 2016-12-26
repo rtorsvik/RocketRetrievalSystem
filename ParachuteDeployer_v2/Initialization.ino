@@ -9,7 +9,7 @@ void initPins()
 	pinMode(pin_led_red, OUTPUT);
 	pinMode(pin_led_green, OUTPUT);
 	pinMode(pin_led_blue, OUTPUT);
-	pinMode(pin_button_zero, OUTPUT);
+	pinMode(pin_servo, OUTPUT);
 }
 
 
@@ -42,7 +42,7 @@ void initAltimeter()
 	//else, set an error message
 	else
 	{
-		e |= 1;		//set bit nr 0, altimeter error
+		e |= 1 << 0;		//set bit nr 0, altimeter error
 
 		#if DEBUG
 		Serial.println("failed to initialize");
@@ -56,14 +56,26 @@ void initAltimeter()
 //_____________________________________________________________________________________________________________________________________________
 void initAccelerometer()
 {
-	/*
-	if (!accel.begin())
+	#if DEBUG
+	Serial.print("Accelerometer...\t");
+	#endif
+	
+	if (accel.begin())
 	{
-	// There was a problem detecting the LSM303(accelerometer) ... check your connections
-	Serial.println(F("Ooops, no LSM303(accelerometer) detected ... Check your wiring!"));
-	while (1);
+		#if DEBUG
+		Serial.println("initialized!");
+		#endif
 	}
-	*/
+
+	//else, set an error message
+	else
+	{
+		e |= 1 << 2;		//set bit nr 2, accelerometer error
+
+		#if DEBUG
+		Serial.println("failed to initialize");
+		#endif
+	}
 }
 
 

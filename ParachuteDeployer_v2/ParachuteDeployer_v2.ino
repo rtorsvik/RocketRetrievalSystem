@@ -4,8 +4,10 @@
 	Author: Rein Åsmund Torsvik
 	2016-01-23
 
-	Updates
+	Updates:
 	2016-12-22
+	2016-12-25	ver. 2.1	Added control of servo and temperature meassurement
+	2016-12-26				Added functions for saving data to SD-card, not tested yet
 */
 
 
@@ -14,8 +16,9 @@
 
 //precompile options
 //_____________________________________________________________________________________________________________________________________________
+#define VERSION 2.1
 #define DEBUG true
-#define VERSION 2.0
+#define SDCARD true
 
 
 
@@ -26,10 +29,10 @@
 #include <SD.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
-//#include <Adafruit_LSM303_U.h>
+#include <Adafruit_LSM303_U.h>
 #include <Adafruit_BMP085_U.h>
-//#include <Adafruit_L3GD20_U.h>
-//#include <Adafruit_10DOF.h>
+#include <Adafruit_L3GD20_U.h>
+#include <Adafruit_10DOF.h>
 
 
 
@@ -39,53 +42,63 @@
 #define pin_led_green 5
 #define pin_led_blue 9
 #define pin_servo 10
-#define pin_button_zero 22
-
+#define pin_SD_CS 7
 
 
 //Global instances
 //_____________________________________________________________________________________________________________________________________________
-Servo servo; //deployment servo
-//Adafruit_10DOF                dof = Adafruit_10DOF();
-//Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(30301);
+Servo							servo;											//parachute deployment servo
+Adafruit_10DOF					dof = Adafruit_10DOF();
+Adafruit_LSM303_Accel_Unified	accel = Adafruit_LSM303_Accel_Unified(30301);
 //Adafruit_LSM303_Mag_Unified   mag = Adafruit_LSM303_Mag_Unified(30302);
-Adafruit_BMP085_Unified       bmp = Adafruit_BMP085_Unified(18001);
+Adafruit_BMP085_Unified			bmp = Adafruit_BMP085_Unified(18001);
 
 
 
 //Global constants
 //_____________________________________________________________________________________________________________________________________________
-const float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
+const int		altitudeDropThreshold = 2;				//how many meters of drop below the max height before the parachute deploys
+
+const float		seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
+const float		filterConstant = 0.95;					//filter constant for the filtering of sensor values (value between 0 and 1)
+
+const uint8_t	servo_open = 10;						//servo possition to open hatch and deploy parachute
+const uint8_t	servo_closed = 90;						//servo porrition when hacth is closed
+
 
 
 //Global variables
 //_____________________________________________________________________________________________________________________________________________
-float altitudeRaw;
-float altitude;
-float altitude_ground;
+float	altitudeRaw;					//raw altidude value from altimeter
+float	altitude;						//current altitude (filtered value)
+int		altitude_ground;				//altitude at ground level (where the rocket was initialized)
+float	altitude_max;					//the maximum altitude the rocket has reached
 
-float temperatureRaw;
+float	temperatureRaw;					//raw temperature value
 
-
-
-
-//system state
-boolean deployParachute = false;
-
-int e = 0;					//error messages
-//bit#, error message
-//0, Altimeter error
-//1, SD-card error
+sensors_vec_t   orientation;
 
 
 
+boolean deployParachute = false;		//is set to true when system should deploy parashute
+boolean openHatch = false;				//flag to tell system to unlock parachute
+long ms_close_hatch;
 
-//Program values
+
+
+//System variables
 //_____________________________________________________________________________________________________________________________________________
-long runCount = 0; //counts number of program itterations
-long ms = 0; //milliseconds holder
-long ms_prev = 0;
-long dt = 0; //loop time
+long	runCount = 0;					//counts number of program itterations
+long	ms = 0;							//current time [ms]
+long	ms_prev = 0;					//time in previous loop, used to calculate loop time
+long	dt = 0;							//loop time
+
+int		e = 0;							//error messages
+											//bit nr, error
+											//0		altimeter is disconnected(meaning the parachute might not deploy)
+											//1		SD card is disconnected(the acquired data wil not be saved)
+											//2		accelerometer is disconnected
+											//3
 
 
 
@@ -100,7 +113,7 @@ void setup(void)
 #if DEBUG
 	delay(1000);
 	Serial.begin(9600);
-	Serial.print("Initializing parachute deployment and data acquisition module \nVersion: "); Serial.println(VERSION);
+	Serial.print("\nInitializing parachute deployment and data acquisition module \nVersion: "); Serial.println(VERSION);
 	Serial.println();
 #endif
 
@@ -110,12 +123,58 @@ void setup(void)
 	//set the indikator LED red to indicate start of initialization
 	led_r_on();
 
-	//Initialise the sensors
-	initAltimeter();
+#if SDCARD
+	//Initialize SD-Card and generate new log file
+	//initSDCARD();
+#endif
 
 	//Initialize serv motor
-	initServo();
+	//initServo();							//temporerily removed, attach servo when deploying parachute instead
 
+	//Initialize accelerometer
+	//initAccelerometer();
+
+	//Initialize magnetometer
+	//initMagnetometer();
+
+	//Initialize the altimeter (barometer) and find ground level before exiting initialization
+	initAltimeter();
+
+	#if DEBUG
+	Serial.print("\tSetting current altitude as ground level (takes about 10 seconds)\n\t");
+	int t = 1000;
+	#endif
+
+	altitude = getAltitude();				//set initial altitude value
+	while (millis() < 10000)
+	{
+		#if DEBUG
+		if (millis() > t)					//every 1 secont, print "." to show progress
+		{
+			Serial.print(".");
+			t += 1000;
+		}
+		#endif
+
+		altitudeRaw = getAltitude();		//get altitude from altimeter (barometer)
+		altitude = filterConstant*altitude + (1 - filterConstant)*altitudeRaw;	//filter raw altitude values with FIR filter			
+	}
+
+	#if DEBUG
+	Serial.print(" ground level set to: "); Serial.println(altitude);
+	#endif
+
+	altitude_ground = altitude;				//current altitude is set as the ground level
+	altitude = altitude - altitude_ground;	//reset altitude to ground leven as new initial altitude value
+
+
+
+	//end of initializatino
+	//if all systems are go, green status LED should light up.
+	#if DEBUG
+	Serial.println("\nFinished initialization\n\n");
+	delay(3000);
+	#endif
 
 }
 
@@ -128,6 +187,7 @@ void setup(void)
 //#############################################################################################################################################
 void loop(void)
 {
+	//System
 	//update time and loop time
 	ms = millis();
 	dt = ms - ms_prev;
@@ -135,24 +195,54 @@ void loop(void)
 
 	
 
+	//Acceleration
+	//TODO
 
+
+
+	//Magnetometer (heading)
+	//TODO
 
 
 	
 	//Altitude
 	//get the altitude from the altimeter (barometer) and filter the raw value
 	//10 seconds startup, set the current altitude as the grount level
-	altitudeRaw = getAltitude();
-	altitudeRaw = altitudeRaw - altitude_ground;	//subtract ground level from raw altitude value
+	altitudeRaw = getAltitude();							//get altitude from altimeter (barometer)
+	altitudeRaw = altitudeRaw - altitude_ground;			//subtract ground level from raw altitude value
 
-	float a = 0.9;									//filter constant
-	altitude = a*altitude + (1 - a)*altitudeRaw;	//filter raw altitude values with FIR filter
+	altitude = filterConstant*altitude + (1 - filterConstant)*altitudeRaw;	//filter raw altitude values with FIR filter
 
-	if (altitude_ground == 0 && ms > 10000)			//after 10 seconds, set current altitude as ground level
+
+
+	//Parachute deployment
+	//Deploy parachute when rocket is decending (altitude begins to drop)
+	//Latch that secures the parachute is released by the servo for 1000ms, alowing the hatch to open and the parachute to deploy
+	//Hatch might allso be opened by some button, in the future, by having the button set the openHatch variable
+	altitude_max = max(altitude, altitude_max);
+
+	if (altitude < altitude_max - altitudeDropThreshold
+		&& !deployParachute)								//if altitude drops beneth a sertain threshold, set command to deploy parchute
 	{
-		altitude_ground = altitude;
+		deployParachute = true;
+		openHatch = true;
 	}
 
+	if (openHatch)											//if parachute should deploy, release hatch lock for 1000ms
+	{
+		ms_close_hatch = ms + 1000;
+		openHatch = false;
+	}
+
+	if (ms > ms_close_hatch)								//if the 1000ms has run out, detach servo (close hatch lock)
+	{
+		servo.detach();
+	}
+	else													
+	{
+		servo.attach(pin_servo);
+		servo.write(servo_open);
+	}
 	
 
 	
@@ -169,11 +259,17 @@ void loop(void)
 	#if DEBUG
 	if (runCount % 16 == 0)
 	{
-		Serial.println("System data:");
-		Serial.print("\tloop time [ms]:\t"); Serial.println(dt);
-		Serial.print("\taltitude [m]:\t"); Serial.println(altitude);
-
+		Serial.println("\nSystem data:");
+		Serial.print("\trun time [ms]:\t\t"); Serial.println(ms);
+		Serial.print("\tloop time [ms]:\t\t"); Serial.println(dt);
+		Serial.print("\terror:\t\t\t"); Serial.println(e);
 		Serial.println();
+		Serial.print("\taltitude [m]:\t\t"); Serial.println(altitude);
+		Serial.print("\taltitude max [m]:\t"); Serial.println(altitude_max);
+		Serial.println();
+		Serial.print("\ttemperature [*C]:\t"); Serial.println(temperatureRaw);
+		Serial.println();
+		ms > ms_close_hatch ? Serial.println("\thatch:\t\t\tclosed") : Serial.println("\thatch:\t\t\topened");
 	}
 	#endif
 

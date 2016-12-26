@@ -88,6 +88,8 @@ extern "C" void __cxa_pure_virtual() {;}
 #define portModeRegister(P)
 #include <ParachuteDeployer_v2.ino>
 #include <Initialization.ino>
+#include <SDCard.ino>
 #include <Sensors.ino>
+#include <Servo.ino>
 #include <statusLED.ino>
 #endif

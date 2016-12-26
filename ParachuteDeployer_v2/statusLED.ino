@@ -11,8 +11,8 @@
 
 		bit nr,	error
 		0		altimeter is disconnected	(meaning the parachute might not deploy)
-		1		SD card is disconnected		(the acquired data wil not be saved)
-		2
+		1		Error on SD card			(the acquired data might not be saved to the SD card)
+		2		accelerometer is disconnected
 		3
 
 		Example:
