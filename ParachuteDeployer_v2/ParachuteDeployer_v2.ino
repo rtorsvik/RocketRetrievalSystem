@@ -46,11 +46,9 @@
 
 
 
-
-
 //Global constants
 //_____________________________________________________________________________________________________________________________________________
-const int		altitudeDropThreshold = 2;				//how many meters of drop below the max height before the parachute deploys
+const int		altitudeDropThreshold = 3;				//how many meters of drop below the max height before the parachute deploys
 
 const float		filterConstant = 0.95;					//filter constant for the filtering of sensor values (value between 0 and 1)
 
@@ -59,13 +57,19 @@ const float		filterConstant = 0.95;					//filter constant for the filtering of s
 //Global variables
 //_____________________________________________________________________________________________________________________________________________
 float	altitudeRaw;					//raw altidude value from altimeter
+float	altitudeRaw_prev;
 float	altitude;						//current altitude (filtered value)
 int		altitude_ground;				//altitude at ground level (where the rocket was initialized)
 float	altitude_max;					//the maximum altitude the rocket has reached
 
 float	temperatureRaw;					//raw temperature value
+//float	temperatureRaw_prev;
 
 sensors_vec_t   orientation;
+//sensors_vec_t   orientation_prev;
+
+sensors_vec_t   acceleration;
+//sensors_vec_t   acceleration_prev;
 
 boolean deployParachute = false;		//is set to true when system should deploy parashute
 
@@ -85,6 +89,10 @@ int		e = 0;							//error messages
 											//2		accelerometer is disconnected
 											//3
 
+int		e_cnt_0 = 0;					//counts how many times in a row the alltitude value from the sensor has been the same.
+//int		e_cnt_1 = 0;
+int		e_cnt_2 = 0;
+//int		e_cnt_3 = 0;
 
 
 
@@ -117,7 +125,7 @@ void setup(void)
 	//initServo();							//temporerily removed, attach servo when deploying parachute instead
 
 	//Initialize accelerometer
-	//initAccelerometer();
+	initAccelerometer();
 
 	//Initialize magnetometer
 	//initMagnetometer();
@@ -181,20 +189,20 @@ void loop(void)
 	
 
 	//Acceleration
-	//TODO
+	acceleration = getAcceleration();
 
 
 
 	//Magnetometer (heading)
-	//TODO
+	//getMag();
 
 
 	
 	//Altitude
 	//get the altitude from the altimeter (barometer) and filter the raw value
 	//10 seconds startup, set the current altitude as the grount level
-	altitudeRaw = getAltitude();							//get altitude from altimeter (barometer)
-	altitudeRaw = altitudeRaw - altitude_ground;			//subtract ground level from raw altitude value
+	altitudeRaw = getAltitude();											//get altitude from altimeter (barometer)
+	altitudeRaw = altitudeRaw - altitude_ground;							//subtract ground level from raw altitude value
 
 	altitude = filterConstant*altitude + (1 - filterConstant)*altitudeRaw;	//filter raw altitude values with FIR filter
 
@@ -227,6 +235,7 @@ void loop(void)
 
 	//print debug values
 	#if DEBUG
+	float _1g = 9.81;
 	if (runCount % 16 == 0)
 	{
 		Serial.println("\nSystem data:");
@@ -239,7 +248,12 @@ void loop(void)
 		Serial.println();
 		Serial.print("\ttemperature [*C]:\t"); Serial.println(temperatureRaw);
 		Serial.println();
-		deployParachute ? Serial.println("\tparachute:\t\tdeployed") : Serial.println("\thatch:\t\t\tready");
+		Serial.print("\taccel x (up) [G]:\t"); Serial.println(acceleration.x / _1g);
+		Serial.print("\taccel y      [G]:\t"); Serial.println(acceleration.y / _1g);
+		Serial.print("\taccel z      [G]:\t"); Serial.println(acceleration.z / _1g);
+		Serial.print("\tstatus:\t\t\t"); Serial.println(acceleration.status);
+		Serial.println();
+		deployParachute ? Serial.println("\tparachute:\t\tdeployed") : Serial.println("\tparachute:\t\tready");
 		hatchControl() ? Serial.println("\thatch:\t\t\topened") : Serial.println("\thatch:\t\t\tclosed");
 	}
 	#endif

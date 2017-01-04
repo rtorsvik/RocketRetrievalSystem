@@ -15,7 +15,7 @@
 //_____________________________________________________________________________________________________________________________________________
 Adafruit_10DOF					dof = Adafruit_10DOF();
 Adafruit_LSM303_Accel_Unified	accel = Adafruit_LSM303_Accel_Unified(30301);
-//Adafruit_LSM303_Mag_Unified   mag = Adafruit_LSM303_Mag_Unified(30302);
+Adafruit_LSM303_Mag_Unified		mag = Adafruit_LSM303_Mag_Unified(30302);
 Adafruit_BMP085_Unified			bmp = Adafruit_BMP085_Unified(18001);
 
 
@@ -23,8 +23,19 @@ Adafruit_BMP085_Unified			bmp = Adafruit_BMP085_Unified(18001);
 //Global constants
 //_____________________________________________________________________________________________________________________________________________
 const float		seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
+const float		_1g = 9.81;
 
 
+//Global variables
+//_____________________________________________________________________________________________________________________________________________
+sensors_event_t accel_event;
+sensors_event_t accel_event_prev;
+
+sensors_event_t mag_event;
+//sensors_event_t mag_event_prev;
+
+sensors_event_t bmp_event;
+sensors_event_t bmp_event_prev;
 
 
 
@@ -33,7 +44,7 @@ const float		seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
 void initAltimeter()
 {
 	#if DEBUG
-	Serial.print("Altimeter...\t");
+	Serial.print("Altimeter...\t\t");
 	#endif
 
 	//if the altimeter is successfully initialized
@@ -89,7 +100,6 @@ void initAccelerometer()
 //_____________________________________________________________________________________________________________________________________________
 void initMagnetometer()
 {
-	/*
 	#if DEBUG
 	Serial.print("Magnetometer...\t");
 	#endif
@@ -110,18 +120,18 @@ void initMagnetometer()
 		Serial.println("failed to initialize");
 		#endif
 	}
-	*/
+
 }
 
 
-
+/*
 void getSensorData()
 {
 	//sensors_event_t accel_event;
 	//sensors_event_t mag_event;
 	//sensors_vec_t   orientation;
 
-	/*
+	
 
 	//Calculate pitch and roll from the raw accelerometer data
 	accel.getEvent(&accel_event);
@@ -145,9 +155,9 @@ void getSensorData()
 	Serial.print(orientation.heading);
 	Serial.print(F("; "));
 	}
-	*/
+	
 
-	/*
+
 	//Barometer 
 	//_________________________________________________________________________________________________________________________________________
 	sensors_event_t bmp_event;
@@ -163,9 +173,10 @@ void getSensorData()
 
 
 	}
-	*/
+	
 
 }
+*/
 
 
 
@@ -173,8 +184,7 @@ void getSensorData()
 //_________________________________________________________________________________________________________________________________________
 float getAltitude()
 {
-	sensors_event_t bmp_event;
-	float altitude;
+	float alt;
 
 	bmp.getEvent(&bmp_event);
 	if (bmp_event.pressure)
@@ -183,10 +193,24 @@ float getAltitude()
 		bmp.getTemperature(&temperatureRaw);
 
 		//Get altitude raw value
-		altitude = bmp.pressureToAltitude(seaLevelPressure, bmp_event.pressure, temperatureRaw);
+		alt = bmp.pressureToAltitude(seaLevelPressure, bmp_event.pressure, temperatureRaw);
 	}
 
-	return altitude;
+
+	//Check for sensor error
+	if (bmp_event.pressure == bmp_event_prev.pressure)	//check if value has not changed, if not, assume sensor disconnected
+	{
+		if (e_cnt_0++ > 0) e |= 1 << 0;
+	}
+	else
+	{
+		e &= ~(1 << 0);
+		e_cnt_0 = 0;
+	}
+	bmp_event_prev = bmp_event;
+
+
+	return alt;
 }
 
 
@@ -195,11 +219,38 @@ float getAltitude()
 //_________________________________________________________________________________________________________________________________________
 sensors_vec_t getAcceleration()
 {
-	sensors_event_t accel_event;
-	sensors_vec_t   orientation;
+	//Get acceleration 
+	accel.getEvent(&accel_event);
 
 	//Calculate pitch and roll from the raw accelerometer data
-	accel.getEvent(&accel_event);
-	if (dof.accelGetOrientation(&accel_event, &orientation))
-		return orientation;
+	//dof.accelGetOrientation(&accel_event, &orientation);
+
+	//Check for sensor error
+	if (accel_event.acceleration.x == accel_event_prev.acceleration.x)		//check if value has not changed, if not, assume sensor disconnected
+	{
+		if (e_cnt_2++ > 3) e |= 1 << 2;
+	}
+	else
+	{
+		e &= ~(1 << 2);
+		e_cnt_2 = 0;
+	}
+	accel_event_prev = accel_event;
+
+
+
+	return accel_event.acceleration;
+
+}
+
+
+
+//Get magnetometer values
+//_________________________________________________________________________________________________________________________________________
+void getMag()
+{	
+	//Calculate the heading using the magnetometer
+	mag.getEvent(&mag_event);
+	dof.magGetOrientation(SENSOR_AXIS_Z, &mag_event, &orientation);
+
 }

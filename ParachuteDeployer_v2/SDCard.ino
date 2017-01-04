@@ -68,17 +68,18 @@ void createNewNumberedFile()
 			//create header for log file
 			logString = "";
 			logString += "Explaination of tags: ";
-			logString += "ms = milliseconds since program start, ";
-			logString += "dt = program loop-time, ";
-			logString += "e = error message";
-			logString += "alt = altitude";
-			logString += "altR = raw altitude";
-			logString += "tempR = raw temperature";
+			logString += "ms = time since program start [ms], ";
+			logString += "dt = program loop-time [ms], ";
+			logString += "e = error message, ";
+			logString += "alt = altitude [m], ";
+			logString += "altR = raw altitude [m], ";
+			logString += "tempR = raw temperature [*C], ";
+			logString += "aX, aY and aZ = acceleration in x(up), y and z [G], ";
 			logString += "para = parachute deployed";
 			logFile.println(logString);
 
 			logString = "";
-			logString += "ms,dt,e,alt,altR,tempR,para";
+			logString += "ms,dt,e,alt,altR,tempR,aX,aY,aZ,para";
 			logFile.println(logString);
 
 			#if DEBUG
@@ -117,6 +118,12 @@ void logData()
 	logString += altitudeRaw;
 	logString += ",";
 	logString += temperatureRaw;
+	logString += ",";
+	logString += acceleration.x;
+	logString += ",";
+	logString += acceleration.y;
+	logString += ",";
+	logString += acceleration.z;
 	logString += ",";
 	logString += deployParachute;
 
