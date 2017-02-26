@@ -15,8 +15,8 @@ Servo			servo;					//parachute deployment servo
 
 //Global constants
 //_____________________________________________________________________________________________________________________________________________
-const uint8_t	servo_open = 10;		//servo possition to open hatch and deploy parachute
-const uint8_t	servo_closed = 90;		//servo porrition when hacth is closed
+const uint8_t	servo_open = 140;		//servo possition to open hatch and deploy parachute
+const uint8_t	servo_closed = 10;		//servo porrition when hacth is closed
 
 
 

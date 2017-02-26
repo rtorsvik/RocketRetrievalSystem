@@ -17,8 +17,10 @@
 //precompile options
 //_____________________________________________________________________________________________________________________________________________
 #define VERSION 2.1
-#define DEBUG true
-#define SDCARD false
+#define DEBUG	false		//enable/disable debug mode
+#define SDCARD	true		//include SD-card to sketch
+#define ACCEL	false		//include accelerometer to sketch
+#define MAGN	false		//include magnetometer to sketch
 
 
 
@@ -48,9 +50,9 @@
 
 //Global constants
 //_____________________________________________________________________________________________________________________________________________
-const int		altitudeDropThreshold = 3;				//how many meters of drop below the max height before the parachute deploys
+#define altitudeDropThreshold 3			//how many meters of drop below the max height before the parachute deploys
 
-const float		filterConstant = 0.95;					//filter constant for the filtering of sensor values (value between 0 and 1)
+#define filterConstant 0.95				//filter constant for the filtering of sensor values (value between 0 and 1)
 
 
 
@@ -65,11 +67,15 @@ float	altitude_max;					//the maximum altitude the rocket has reached
 float	temperatureRaw;					//raw temperature value
 //float	temperatureRaw_prev;
 
-sensors_vec_t   orientation;
-//sensors_vec_t   orientation_prev;
-
+#if ACCEL
 sensors_vec_t   acceleration;
 //sensors_vec_t   acceleration_prev;
+#endif
+
+#if MAGN
+sensors_vec_t   orientation;
+//sensors_vec_t   orientation_prev;
+#endif
 
 boolean deployParachute = false;		//is set to true when system should deploy parashute
 
@@ -77,22 +83,29 @@ boolean deployParachute = false;		//is set to true when system should deploy par
 
 //System variables
 //_____________________________________________________________________________________________________________________________________________
+#if DEBUG
 long	runCount = 0;					//counts number of program itterations
+long	dt = 0;							//loop time
+#endif
 long	ms = 0;							//current time [ms]
 long	ms_prev = 0;					//time in previous loop, used to calculate loop time
-long	dt = 0;							//loop time
 
-int		e = 0;							//error messages
+
+byte	e = 0;							//error messages
 											//bit nr, error
 											//0		altimeter is disconnected(meaning the parachute might not deploy)
 											//1		SD card is disconnected(the acquired data wil not be saved)
 											//2		accelerometer is disconnected
 											//3
 
-int		e_cnt_0 = 0;					//counts how many times in a row the alltitude value from the sensor has been the same.
-//int		e_cnt_1 = 0;
-int		e_cnt_2 = 0;
-//int		e_cnt_3 = 0;
+byte	e_cnt_0 = 0;					//counts how many times in a row the alltitude value from the sensor has been the same.
+//byte		e_cnt_1 = 0;
+
+#if ACCEL
+byte	e_cnt_2 = 0;
+#endif
+
+//byte		e_cnt_3 = 0;
 
 
 
@@ -103,12 +116,12 @@ int		e_cnt_2 = 0;
 void setup(void)
 {
 
-#if DEBUG
+	#if DEBUG
 	delay(1000);
 	Serial.begin(9600);
 	Serial.print("\nInitializing parachute deployment and data acquisition module \nVersion: "); Serial.println(VERSION);
 	Serial.println();
-#endif
+	#endif
 
 	//Initialize GPIO pins
 	initPins();
@@ -116,16 +129,18 @@ void setup(void)
 	//set the indikator LED red to indicate start of initialization
 	led_r_on();
 
-#if SDCARD
+	#if SDCARD
 	//Initialize SD-Card and generate new log file
 	initSDCARD();
-#endif
+	#endif
 
 	//Initialize serv motor
 	//initServo();							//temporerily removed, attach servo when deploying parachute instead
 
+	#if ACCEL
 	//Initialize accelerometer
 	initAccelerometer();
+	#endif
 
 	//Initialize magnetometer
 	//initMagnetometer();
@@ -183,19 +198,22 @@ void loop(void)
 	//System
 	//update time and loop time
 	ms = millis();
+	#if DEBUG
 	dt = ms - ms_prev;
+	#endif
 	ms_prev = ms;
 
 	
-
+	#if ACCEL
 	//Acceleration
 	acceleration = getAcceleration();
+	#endif
 
 
-
+	#if MAGN
 	//Magnetometer (heading)
-	//getMag();
-
+	getMag();
+	#endif
 
 	
 	//Altitude
@@ -239,30 +257,40 @@ void loop(void)
 	if (runCount % 16 == 0)
 	{
 		Serial.println("\nSystem data:");
-		Serial.print("\trun time [ms]:\t\t"); Serial.println(ms);
-		Serial.print("\tloop time [ms]:\t\t"); Serial.println(dt);
-		Serial.print("\terror:\t\t\t"); Serial.println(e);
+		Serial.print("\trun time    [ms]:\t"); Serial.println(ms);
+		Serial.print("\tloop time   [ms]:\t"); Serial.println(dt);
+		Serial.print("\terror:           \t"); Serial.println(e);
 		Serial.println();
-		Serial.print("\taltitude [m]:\t\t"); Serial.println(altitude);
+		Serial.print("\taltitude     [m]:\t"); Serial.println(altitude);
 		Serial.print("\taltitude max [m]:\t"); Serial.println(altitude_max);
 		Serial.println();
 		Serial.print("\ttemperature [*C]:\t"); Serial.println(temperatureRaw);
+
+		#if ACCEL
 		Serial.println();
 		Serial.print("\taccel x (up) [G]:\t"); Serial.println(acceleration.x / _1g);
 		Serial.print("\taccel y      [G]:\t"); Serial.println(acceleration.y / _1g);
 		Serial.print("\taccel z      [G]:\t"); Serial.println(acceleration.z / _1g);
-		Serial.print("\tstatus:\t\t\t"); Serial.println(acceleration.status);
+		Serial.print("\tstatus:          \t"); Serial.println(acceleration.status);
+		#endif
+
 		Serial.println();
 		deployParachute ? Serial.println("\tparachute:\t\tdeployed") : Serial.println("\tparachute:\t\tready");
 		hatchControl() ? Serial.println("\thatch:\t\t\topened") : Serial.println("\thatch:\t\t\tclosed");
 	}
+	runCount++;
 	#endif
 
 
+	
+	#if SDCARD
+	//log data
+	logData();
+	#endif
 
 	//handle indikating of system status via status LED
 	updateStatusLED();
 
 	//end of loop
-	runCount++;
+	
 }

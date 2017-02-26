@@ -16,6 +16,8 @@ File						logFile;			//log file for logging sensor data
 String logString = "";							//string assembly for data to log file
 char logFile_name[] = "log000.csv";				//char array to create filename
 
+char SEPARATOR = ';';
+
 
 
 //Initialize SD-Card and generate new log file
@@ -39,7 +41,7 @@ void initSDCARD()
 	//else, set an error message
 	else
 	{
-		e |= 1 << 1;		//set bit nr 0, Error on SD card
+		e |= 1 << 1;		//set bit nr 1, Error on SD card
 
 		#if DEBUG
 		Serial.println("failed to initialize");
@@ -56,16 +58,17 @@ void initSDCARD()
 //_____________________________________________________________________________________________________________________________________________
 void createNewNumberedFile()
 {
+
 	for (uint8_t cnt = 0; cnt < 1000; cnt++)
 	{
 		logFile_name[3] = (cnt / 100) % 10 + '0';
 		logFile_name[4] = (cnt /  10) % 10 + '0';
 		logFile_name[5] = (cnt /   1) % 10 + '0';
 
-		if (!SD.exists(logFile_name)){			//create new file only if current filename doesn't already exist
-			logFile = SD.open(logFile_name, FILE_WRITE);
-
-			//create header for log file
+		if (!SD.exists(logFile_name))		//create new file only if current filename doesn't already exist
+		{			
+			//add description for data
+			/*
 			logString = "";
 			logString += "Explaination of tags: ";
 			logString += "ms = time since program start [ms], ";
@@ -76,11 +79,22 @@ void createNewNumberedFile()
 			logString += "tempR = raw temperature [*C], ";
 			logString += "aX, aY and aZ = acceleration in x(up), y and z [G], ";
 			logString += "para = parachute deployed";
-			logFile.println(logString);
+			
+			SDWrite(logString);
+			*/
 
+			//create header for data
 			logString = "";
-			logString += "ms,dt,e,alt,altR,tempR,aX,aY,aZ,para";
-			logFile.println(logString);
+			logString += "ms;e;alt;altR;tempR";
+
+			#if ACCEL
+			logString += ";aX;aY;aZ";
+			#endif
+
+			logString += ";para";
+
+			SDWrite(logString);
+			
 
 			#if DEBUG
 			Serial.print("\tNew logfile ");
@@ -94,8 +108,13 @@ void createNewNumberedFile()
 
 	}
 
+	#if DEBUG
 	if (!logFile) Serial.print("\tCould not create log file");
-	logFile.close();
+	#endif
+
+	
+
+	//*/
 
 }
 
@@ -105,43 +124,67 @@ void createNewNumberedFile()
 //_____________________________________________________________________________________________________________________________________________
 void logData()
 {
+	
+	
+
 	//create string to write to log file
 	logString = "";
 	logString += ms;
-	logString += ",";
-	logString += dt;
-	logString += ",";
-	logString += e;
-	logString += ",";
-	logString += altitude;
-	logString += ",";
-	logString += altitudeRaw;
-	logString += ",";
-	logString += temperatureRaw;
-	logString += ",";
-	logString += acceleration.x;
-	logString += ",";
-	logString += acceleration.y;
-	logString += ",";
-	logString += acceleration.z;
-	logString += ",";
-	logString += deployParachute;
+	logString += SEPARATOR;
 
-	//open file
-	logFile = SD.open(logFile_name, FILE_WRITE);
+	logString += e;
+	logString += SEPARATOR;
+		
+	logString += altitude;
+	logString += SEPARATOR;
+	logString += altitudeRaw;
+	logString += SEPARATOR;
+	logString += temperatureRaw;
+	logString += SEPARATOR;
+
+	#if ACCEL
+	logString += acceleration.x;
+	logString += SEPARATOR;
+	logString += acceleration.y;
+	logString += SEPARATOR;
+	logString += acceleration.z;
+	logString += SEPARATOR;
+	#endif
+
+	logString += deployParachute;
+	
 
 	//if file is open, write to it
-	if (logFile){
-		logFile.println(logString);
-		logFile.close();
-
+	if (SDWrite(logString))
+	{
 		e &= ~(1 << 1);		//reset bit nr 0, Error on SD card, if the error is resolved
 	}
 	//else, there was an error opening the file, set an error message
-	else{
+	else
+	{
 		e |= 1 << 1;		//set bit nr 0, Error on SD card
 
 	}
 
 }
+
+
+bool SDWrite(String s)
+{
+	//open file
+	logFile = SD.open(logFile_name, FILE_WRITE);
+
+	//if file is open, write to it
+	if (logFile){
+		logFile.println(s);
+		logFile.close();
+
+		return true;
+	}
+
+	return false;
+}
+
+
+
 #endif
